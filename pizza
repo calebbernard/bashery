@@ -1,0 +1,74 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+	echo "Call like so:"
+	echo "pizza 12-12.99 14-14 2x10-10.50"
+	echo "where 2x10-10.50 means two 10-inch pizzas for 10.50 total"
+	exit
+fi
+
+pizzaCount=0
+pi=3.1415926535
+declare -a pizzaCost
+declare -a pizzaDiameter
+declare -a pizzaNum
+declare -a pizzaArea
+declare -a pizzaEfficiency
+
+for i in "$@"
+do
+	arg=$(grep -cE "^([0-9]+x)?[0-9]+-[0-9]+(\.[0-9]{2})?$" <<< $i)
+	if [ $arg -eq 0 ]
+	then
+		echo "$i is a bad argument"
+	else
+		pizzaNum[$pizzaCount]=$(grep -oE "^[0-9]+x" <<< $i)
+		if [ ${#pizzaNum[$pizzaCount]} == 0 ]
+		then
+			pizzaNum[$pizzaCount]=1
+		else
+			pizzaNum[$pizzaCount]=${pizzaNum[$pizzaCount]::-1}
+		fi
+		pizzaDiameter[$pizzaCount]=$(grep -oE "[0-9]+-" <<< $i)
+		pizzaDiameter[$pizzaCount]=${pizzaDiameter[$pizzaCount]::-1}
+		pizzaCost[$pizzaCount]=$(grep -oE "[0-9]+(\.[0-9]{2})?$" <<< $i)
+		radius=${pizzaDiameter[$pizzaCount]}
+		cost=${pizzaCost[$pizzaCount]}
+		number=${pizzaNum[$pizzaCount]}
+		pizzaArea[$pizzaCount]=$(bc -l <<< "scale=3; $number * ($pi * (($radius / 2) ^ 2))")
+		area=${pizzaArea[$pizzaCount]}
+		pizzaEfficiency[$pizzaCount]=$(bc -l <<< "($number * $area) / $cost")
+		efficiencyRound=$(grep -oE "^[0-9]+" <<< ${pizzaEfficiency[$pizzaCount]})
+		if [ ${#efficiencyRound} == 0 ]
+		then
+			efficiencyRound=0
+		fi
+		plural=""
+		if [ $number -gt 1 ]
+		then
+			plural="s"
+		fi
+		echo
+		echo ${pizzaNum[$pizzaCount]} ${pizzaDiameter[$pizzaCount]}-inch pizza$plural for \$${pizzaCost[$pizzaCount]}
+		echo "	-> efficiency = ~$efficiencyRound sq. inches / dollar"
+		((pizzaCount++))
+	fi
+done
+
+winnerCount=0
+bestPizza=0
+topEfficiency=0
+
+while [ $winnerCount -lt $pizzaCount ]
+do
+	if [ $(echo "${pizzaEfficiency[$winnerCount]} > $topEfficiency" | bc -l) -eq 1 ]
+	then
+		topEfficiency=${pizzaEfficiency[$winnerCount]}
+		bestPizza=$winnerCount
+	fi
+	((winnerCount++))
+done
+
+echo
+echo Best value is: ${pizzaNum[$bestPizza]} ${pizzaDiameter[$bestPizza]}-inch pizza[s] for \$${pizzaCost[$bestPizza]}
