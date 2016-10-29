@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Caleb Bernard 10-28-16
+
+# Takes various pizza-deals as input, and calculates which one
+# gives the most bang for your buck by comparing total pizza-area
+# of each deal to the price for that deal.
+
 if [ $# -eq 0 ]
 then
 	echo "Call like so:"
