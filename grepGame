@@ -1,0 +1,152 @@
+#!/bin/bash
+
+saveFile="$HOME/.grepGame"
+
+# rng takes 1 argument and returns its crc32
+rng(){
+	echo $(cksum <<< $1 | grep -o "^[0-9]*")
+}
+
+# sanitize returns input stripped of "'s"
+sanitize(){
+	echo $(sed 's/\x27s//' <<< $1)
+}
+
+# verifyHistory verifies save file and presents
+#	next challenge
+verifyHistory(){
+	lines=$(wc $saveFile | sed 's/^\ //' | grep -o "^[0-9]*")
+	count=1
+	verifySum=0
+	word1index=0
+	word2index=0
+	word1="test1"
+	word2="test2"
+	while [ $count -le $lines ]
+	do
+		regex=$(tail -n+$count $saveFile | head -n1)
+		if [ $count -eq 1 ]
+		then
+			if [ $(evaluate hum hem $regex) == "Success!" ]
+			then
+				verifySum=$(rng $regex)
+			else
+				echo "Bad save file!"
+				exit
+			fi
+		else
+			word1index=$(grep -oE "^[0-9]{5}" <<< $verifySum)
+			word2index=$(grep -oE "[0-9]{5}$" <<< $verifySum)
+			word1=$(tail -n+$word1index /usr/share/dict/words | head -n1)
+			word2=$(tail -n+$word2index /usr/share/dict/words | head -n1)
+			word1=$(sanitize $word1)
+			word2=$(sanitize $word2)
+			if [ $(evaluate $word1 $word2 $regex) == "Success!" ]
+			then
+				verifySum=$(rng $regex)
+			else
+				echo "Bad save file!"
+				exit
+			fi
+		fi
+		((count++))
+	done
+	word1index=$(grep -oE "^[0-9]{5}" <<< $verifySum)
+	word2index=$(grep -oE "[0-9]{5}$" <<< $verifySum)
+	word1=$(tail -n+$word1index /usr/share/dict/words | head -n1)
+	word2=$(tail -n+$word2index /usr/share/dict/words | head -n1)
+	word1=$(sanitize $word1)
+	word2=$(sanitize $word2)
+	((lines++))
+	if [ $# -eq 0 ]
+	then
+		echo Level $lines:
+		echo $word1
+		echo $word2
+	else
+		if [ $# -eq 1 ]
+		then
+			output=$(evaluate $word1 $word2 $1)
+			echo $output
+			if [ "$output" == "Success!" ]
+			then
+				echo "Correct!"
+				echo $1 >> $saveFile
+				verifySum
+			fi
+		else
+			echo "Bad number of arguments."
+		fi
+	fi
+}
+
+mainMenu(){
+	if [ $(checkFile) == "fileExists" ]
+	then
+		verifyHistory $@
+	else
+		if [ $# -eq 1 ]
+		then
+			if [ $(evaluate hum hem $1) == "Success!" ]
+			then
+				echo "Correct!"
+				echo $1 >> $saveFile
+			fi
+		else
+			if [ $# -eq 0 ]
+			then
+				echo hum hem
+				echo "Call with an extended regex that doesn't use |"
+				echo "that, when run on /usr/share/dict/words,"
+				echo "only returns these two words."
+			else
+				echo "Bad number of arguments."
+			fi
+		fi
+	fi
+}
+
+checkFile(){
+	if [ -e $saveFile ]
+	then
+		echo fileExists
+	else
+		echo fileNotExists
+	fi
+}
+
+evaluate(){
+	if [ $# -eq 3 ]
+	then
+		word1=$1
+		word2=$2
+		regex=$3
+		outcome=$(grep -E $regex /usr/share/dict/words)
+		outcomeCount=$(wc -w <<< $outcome)
+		if [ $outcomeCount -ne 2 ]
+		then
+			echo "Wrong! Your solution had $outcomeCount answers"
+		else
+			right1=$(grep -c "$word1" <<< $outcome)
+			right2=$(grep -c "$word2" <<< $outcome)
+			if ([ $right1 -eq 0 ] || [ $right2 -eq 0 ])
+			then
+				rules=$(grep -cE "\|" <<< $regex)
+				if [ $rules -gt 0 ]
+				then
+					echo "Your regex breaks the rules!"
+				else					
+					echo "Wrong!"
+				fi
+			else
+				#Here we can check if their stuff matches the dictionary
+				echo "Success!"
+			fi
+		fi
+	else
+		echo "Bad number of arguments."
+	fi
+}
+
+
+mainMenu $@
