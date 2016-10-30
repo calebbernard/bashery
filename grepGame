@@ -70,9 +70,8 @@ verifyHistory(){
 			echo $output
 			if [ "$output" == "Success!" ]
 			then
-				echo "Correct!"
 				echo $1 >> $saveFile
-				verifySum
+				verifyHistory
 			fi
 		else
 			echo "Bad number of arguments."
