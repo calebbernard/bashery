@@ -1,0 +1,111 @@
+regularscaled(){
+	damage=$1
+	rate=$2
+	reload=$3
+	magazine=$4
+	level=$5
+	for i in `seq 1 $level`
+	do
+		damage=$(bc -l <<< "scale=3; $damage / 1.13")
+	done
+	dps=$(bc -l <<< "scale=3; ($damage * $rate) * (($magazine / $rate) / (($magazine / $rate) + $reload))")
+	echo $dps
+}
+
+regular(){
+        damage=$1
+        rate=$2
+        reload=$3
+        magazine=$4
+        level=$5
+        dps=$(bc -l <<< "scale=3; ($damage * $rate) * (($magazine / $rate) / (($magazine / $rate) + $reload))")
+        echo $dps
+}
+
+elementalscaled(){
+	damage=$1
+	rate=$2
+	reload=$3
+	magazine=$4
+	element=$5
+	eldamage=$6
+	chance=$7
+	level=$8
+	for i in `seq 1 $level`
+	do
+		eldamage=$(bc -l <<< "scale=4; $eldamage / 1.13")
+	done
+	chance=$(bc -l <<< "scale=3; $chance / 100")
+	procps=$(bc -l <<< "scale=3; $chance * (($magazine / $rate) / (($magazine / $rate) + $reload))")
+	if [[ $element == "f" ]]
+	then
+		time=5
+	else
+		if [[ $element == "s" ]]
+		then
+			time=2
+		else
+			if [[ $element == "c" ]]
+			then
+				time=8
+			fi
+		fi
+	fi
+	stacksps=$(bc -l <<< "scale=3; $time * $procps")
+	elementaldps=$(bc -l <<< "scale=3; $stacksps * $eldamage")
+	echo $elementaldps
+}
+
+elemental(){
+        damage=$1
+        rate=$2
+        reload=$3
+        magazine=$4
+        element=$5
+        eldamage=$6
+        chance=$7
+        level=$8
+        chance=$(bc -l <<< "scale=3; $chance / 100")
+        procps=$(bc -l <<< "scale=3; $chance * (($magazine / $rate) / (($magazine / $rate) + $reload))")
+        if [[ $element == "f" ]]
+        then
+                time=5
+        else
+                if [[ $element == "s" ]]
+                then
+                        time=2
+                else
+                        if [[ $element == "c" ]]
+                        then
+                                time=8
+                        fi
+                fi
+	fi
+        stacksps=$(bc -l <<< "scale=3; $time * $procps")
+        elementaldps=$(bc -l <<< "scale=3; $stacksps * $eldamage")
+        echo $elementaldps
+}
+
+if [ $# == 5 ]
+then
+	dps=$(regular $@)
+	echo "DPS: $dps"
+	scaledps=$(regularscaled $@)
+	echo "Scaled DPS: $scaledps"
+else
+	if [ $# == 8 ]
+	then
+		el=$(elemental $@)
+		base=$(regular $@)
+		dps=$(bc -l <<< "scale=3; $base + $el")
+		scaledel=$(elementalscaled $@)
+		scaledbase=$(regularscaled $@)
+		scaledps=$(bc -l <<< "scale=3; $scaledel + $scaledbase")
+		echo "Base DPS: $base"
+		echo "Elemental DPS: $el"
+		echo "Total DPS: $dps"
+		echo "Scaled Total: $scaledps"
+	else
+		echo "Damage Rate Reload Magazine [f/s/c elementaldamage procchance] level"
+	fi
+fi
