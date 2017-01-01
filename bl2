@@ -3,8 +3,13 @@ regularscaled(){
 	rate=$2
 	reload=$3
 	magazine=$4
-	level=$5
-	for i in `seq 1 $level`
+	if [[ $# == 5 ]]
+	then
+		level=$5
+	else
+		level=$8
+	fi
+	for i in `seq $level`
 	do
 		damage=$(bc -l <<< "scale=3; $damage / 1.13")
 	done
@@ -31,9 +36,9 @@ elementalscaled(){
 	eldamage=$6
 	chance=$7
 	level=$8
-	for i in `seq 1 $level`
+	for i in `seq $level`
 	do
-		eldamage=$(bc -l <<< "scale=4; $eldamage / 1.13")
+		eldamage=$(bc -l <<< "scale=3; $eldamage / 1.13")
 	done
 	chance=$(bc -l <<< "scale=3; $chance / 100")
 	procps=$(bc -l <<< "scale=3; $chance * (($magazine / $rate) / (($magazine / $rate) + $reload))")
